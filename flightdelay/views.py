@@ -1,18 +1,19 @@
 from flask import Flask, render_template, request
-from config import Config
+#from config import Config
 import pickle
 import datetime
 import pandas as pd
 from sklearn.externals import joblib
-
+import os
 
 app = Flask(__name__)
 
-app.config.from_object(Config)
+app.config.from_object('config')
 
-CT_DIR = 'save/'
+CT_DIR = app.config['BASESAVE']
+print(CT_DIR)
 def load_obj(name):
-    with open(CT_DIR + name + '.pkl', 'rb') as f:
+    with open(os.path.join(CT_DIR, name + '.pkl'), 'rb') as f:
         return pickle.load(f)
 
 # Liste des aéroports
@@ -86,16 +87,13 @@ def hello():
             model_df["HDAYS"] = hDay
 
             app.logger.info('month', str(myDATE.month))
-#            tbl[model_cols.index("MONTH_" + str(myDATE.month))] = 1
             model_df["MONTH_" + str(myDATE.month)] = 1
 
             app.logger.info('weekday', str(myDATE.weekday()))
-#            tbl[model_cols.index("DAY_OF_WEEK_" + str(myDATE.weekday()))] = 1
             model_df["DAY_OF_WEEK_" + str(myDATE.weekday())] = 1
 
             hh, mm = [int(x) for x in myTIME.split(":")]
             app.logger.info('hh', hh)
-#            tbl[model_cols.index("DEP_HOUR_" + str(hh))] = 1
             model_df["DEP_HOUR_" + str(hh)] = 1
 
             # Place de l'aéroport par rapport au modèle de la compagnie
@@ -103,19 +101,10 @@ def hello():
             col = "ORIGIN_AIRPORT_ID_" + str(myDEPARTURE)
             if col not in model_df.columns:
                 return "No departure from " + str(myDEPARTURE) + " for company" + myCOMPANY
- 
             model_df[col] = 1
- #           try:
-#                tbl[model_cols.index("ORIGIN_AIRPORT_ID_" + myDEPARTURE)] = 1
-#                model_df["ORIGIN_AIRPORT_ID_" + str(myDEPARTURE)] = 1
-#            except:
-#                return "No departure from " + str(myDEPARTURE) + " for company" + myCOMPANY
 
             scaler = joblib.load(CT_DIR + 'model_scaler_' + myCOMPANY + '.pkl')
 
-#            X = np.array([tbl]).reshape(1, -1)
-#            X_scaled = scaler.transform(X)
-            
             xnum = 1
             x_numerical = model_df.iloc[:, 0:xnum]
             x_numerical = scaler.transform(x_numerical )
@@ -131,10 +120,8 @@ def hello():
             min, sec = int(y_pred), int((y_pred%1)*60)
             ret = result + "{:02d}min and {:02d}s".format(min, sec)
 
-            #return 'hDay=' + str(hDay) + ', hh=' + str(hh) + ', weekday=' + str(myDATE.weekday())
             return ret
         except Exception as e:
             return str(e)
     return "NO POST"
-
 
