@@ -1,0 +1,6 @@
+.ipynb_checkpoints/
+*.yml
+*.pyc
+desktop.ini
+__pycache__
+~$*.*
