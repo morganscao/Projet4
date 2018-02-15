@@ -12,4 +12,4 @@ if __name__ == "__main__":
     app.logger.setLevel(logging.INFO)
     app.logger.addHandler(logHandler)    
 
-    app.run()
+    app.run(host='127.0.0.3', port=5003, debug=True)

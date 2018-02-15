@@ -53,10 +53,13 @@ def index():
 def hello():
     if request.method == 'POST':
         try:
-            # Récupoération des paramètres envoyés par la requête
+            # Récupération des paramètres envoyés par la requête
             myCOMPANY = request.values[CT_COMPANY]
             myDEPARTURE = request.values[CT_DEPARTURE]
-            myDATE = datetime.datetime.strptime(request.values[CT_DATE], "%Y-%m-%d")
+            try:
+                myDATE = datetime.datetime.strptime(request.values[CT_DATE], "%Y-%m-%d")
+            except:
+                return "Invalide date"
             myTIME = request.values[CT_TIME]
 
             # Infos dans le log
@@ -75,50 +78,52 @@ def hello():
             if len(tbl) == 0:
                 return model_name + ' not found'
     
-            #for col in model_cols:
-            #    app.logger.info(col)
-    
             # New row
             model_df.loc[0] = 0
             
             # Distance par rapport à un jour férié (en 2016 en tout cas)
             hDay = DaysToHoliday(myDATE)
-            app.logger.info('hDay', hDay)
             model_df["HDAYS"] = hDay
-
-            app.logger.info('month', str(myDATE.month))
             model_df["MONTH_" + str(myDATE.month)] = 1
-
-            app.logger.info('weekday', str(myDATE.weekday()))
-            model_df["DAY_OF_WEEK_" + str(myDATE.weekday())] = 1
-
+            model_df["DAY_OF_WEEK_" + str(myDATE.weekday() + 1)] = 1
             hh, mm = [int(x) for x in myTIME.split(":")]
-            app.logger.info('hh', hh)
             model_df["DEP_HOUR_" + str(hh)] = 1
 
             # Place de l'aéroport par rapport au modèle de la compagnie
             # Attention toutes les compagnies ne désservent pas tous les aéroports
             col = "ORIGIN_AIRPORT_ID_" + str(myDEPARTURE)
             if col not in model_df.columns:
-                return "No departure from " + str(myDEPARTURE) + " for company" + myCOMPANY
+                city = model_airport[model_airport['ORIGIN_AIRPORT_ID']==int(myDEPARTURE)].ORIGIN_CITY_NAME.values[0]
+                return "<SMALL>No departure from " + str(city) + " for company " + myCOMPANY + "</SMALL>"
             model_df[col] = 1
 
+            # Même scaler que pour le modèle
             scaler = joblib.load(CT_DIR + 'model_scaler_' + myCOMPANY + '.pkl')
-
             xnum = 1
             x_numerical = model_df.iloc[:, 0:xnum]
             x_numerical = scaler.transform(x_numerical )
             model_df.loc[:, 0:xnum] = x_numerical
 
+            # On récupère le modèle pour prédire
             model = joblib.load(CT_DIR + 'model_SGD_' + myCOMPANY + '.pkl')
             y_pred = model.predict(model_df)[0]
             if y_pred > 0:
-                result = "<SMALL>Retard :</SMALL>"
+                result = "<SMALL>Delay : </SMALL>"
             else:
-                result = "<SMALL>En avance :</SMALL>"
+                result = "<SMALL>Advanced : </SMALL>"
 
-            min, sec = int(y_pred), int((y_pred%1)*60)
-            ret = result + "{:02d}min and {:02d}s".format(min, sec)
+            y_pred = abs(y_pred)
+            hPred = int(y_pred / 60)
+            hMin = int(y_pred % 60)
+            if hPred > 0:
+                ret = result + "%i h, %i min" % (hPred, hMin)
+            else:
+                ret = result + "%i min" % (hMin)
+                
+            #min, sec = int(y_pred), int((y_pred%1)*60)
+            #ret = result + "{:02d}min and {:02d}s".format(min, sec)
+
+            #ret = result + "{%.2f} min" % (y_pred)
 
             return ret
         except Exception as e:

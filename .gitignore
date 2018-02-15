@@ -1,4 +1,5 @@
 .ipynb_checkpoints/
+.save-Copie/
 *.yml
 *.pyc
 desktop.ini
