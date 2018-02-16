@@ -87,6 +87,9 @@ def hello():
             model_df["MONTH_" + str(myDATE.month)] = 1
             model_df["DAY_OF_WEEK_" + str(myDATE.weekday() + 1)] = 1
             hh, mm = [int(x) for x in myTIME.split(":")]
+            col = "DEP_HOUR_" + str(hh)
+            if col not in model_df.columns:
+                return "<SMALL>No departure at this time</SMALL>"
             model_df["DEP_HOUR_" + str(hh)] = 1
 
             # Place de l'aéroport par rapport au modèle de la compagnie
